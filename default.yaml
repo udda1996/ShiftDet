@@ -1,0 +1,87 @@
+# ============================================================
+# ShiftDet Default Configuration
+# All experiment hyperparameters live here.
+# Override any value with --key value on the CLI.
+# ============================================================
+
+# ---- Data ----
+data:
+  n_samples_per_env: 10000   # Training samples per channel environment
+  n_test_samples:    3000    # Test samples per environment
+  signal_length:     128     # Number of complex I/Q samples per block
+  modulations:               # Modulation types (for AMC-embedded detection)
+    - BPSK
+    - QPSK
+  snr_range_train: [-5, 20]  # dB: SNR range for training environments
+  snr_range_test:  [-10, 20] # dB: Wider range at test time
+
+# ---- Channel Environments ----
+environments:
+  train:
+    - name: awgn
+      type: awgn
+    - name: rayleigh_slow
+      type: rayleigh
+      doppler_hz: 0
+    - name: rayleigh_medium
+      type: rayleigh
+      doppler_hz: 50
+    - name: rayleigh_fast
+      type: rayleigh
+      doppler_hz: 200
+  test_unseen:
+    - name: rician
+      type: rician
+      k_factor: 5
+      doppler_hz: 100
+    - name: mimo_2x2
+      type: mimo
+      n_tx: 2
+      n_rx: 2
+    - name: hw_impaired
+      type: hw_impaired
+      iq_imbalance_eps: 0.1
+      iq_imbalance_phi_deg: 5.0
+      phase_noise_linewidth_khz: 10.0
+
+# ---- Model ----
+model:
+  in_channels: 2              # Real + Imaginary parts
+  backbone_channels: [32, 64, 128]  # CNN channel progression
+  kernel_size: 3
+  feature_dim: 256            # Output dimension of feature extractor
+  n_classes: 2                # Binary detection (H0 / H1)
+
+# ---- Training ----
+training:
+  method: irm                 # 'irm' or 'erm'
+  epochs: 100
+  batch_size: 256
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-4
+  irm_lambda: 100.0           # IRM penalty weight (annealed from 1.0)
+  irm_anneal_epochs: 10       # Epochs before full IRM penalty kicks in
+  seed: 42
+
+# ---- OOD Monitor ----
+ood:
+  target_fpr: 0.05            # Calibrate threshold at 5% false OOD alarm
+  score: energy               # 'energy' | 'msp' | 'knn'
+
+# ---- Test-Time Adaptation ----
+tta:
+  enabled: true
+  steps: 10                   # Gradient steps per test batch
+  lr: 1.0e-4                  # Step size for BN parameter update
+  batch_size: 64              # Test batch size for adaptation
+
+# ---- Evaluation ----
+eval:
+  pfa_target: 1.0e-3          # Target false-alarm rate for PD reporting
+  n_roc_points: 200           # Points on ROC curve
+
+# ---- Paths ----
+paths:
+  checkpoint_dir: checkpoints/
+  results_dir:    results/
+  figures_dir:    figures/output/
