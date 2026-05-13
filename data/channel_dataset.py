@@ -160,46 +160,35 @@ def rician_channel(signals: np.ndarray,
     return awgn_channel(received_clean, snr_db)
 
 
-def mimo_2x2_channel(signals: np.ndarray,
-                     snr_db:  np.ndarray) -> np.ndarray:
+def mimo_2x2_channel(signals:  np.ndarray,
+                     snr_db:   np.ndarray,
+                     n_tx:     int = 2,
+                     n_rx:     int = 2) -> np.ndarray:
     """
-    2x2 MIMO Rayleigh channel with maximum-ratio combining (MRC).
-
-    H ~ CN(0, I_{2x2}) drawn per block. The receiver applies
-    matched filter (H^H y) and selects the first stream output.
-
-    This environment is UNSEEN during training.
-
-    Parameters
-    ----------
-    signals : complex (N, L)  single-stream input
-
-    Returns
-    -------
-    received : complex (N, L) after MRC on first receive antenna
+    MIMO Rayleigh channel with maximum-ratio combining (MRC).
+    n_tx and n_rx are now configurable; defaults keep
+    backward compatibility with the 2x2 case.
     """
     N, L = signals.shape
-    n_tx, n_rx = 2, 2
 
     # Channel matrix H (N, n_rx, n_tx) ~ CN(0, 1/n_tx)
     H_real = np.random.randn(N, n_rx, n_tx)
     H_imag = np.random.randn(N, n_rx, n_tx)
     H = (H_real + 1j * H_imag) / np.sqrt(2 * n_tx)
 
-    # Received signal per RX antenna (N, n_rx, L)
-    # Broadcast signals over TX antennas (simplified: same signal on both TX)
-    s_tx = signals[:, np.newaxis, :]          # (N, 1, L)
-    received = np.sum(H[:, :, :, np.newaxis] *
-                      s_tx[:, np.newaxis, :, :], axis=2)  # (N, n_rx, L)
+    # Broadcast signals over TX antennas
+    s_tx = signals[:, np.newaxis, :]           # (N, 1, L)
+    received = np.sum(
+        H[:, :, :, np.newaxis] *
+        s_tx[:, np.newaxis, :, :], axis=2)     # (N, n_rx, L)
 
-    # MRC: combine across RX antennas weighted by conjugate channel
-    # w = H[:, :, 0] / ||H[:, :, 0]||  (first TX column)
-    h_col = H[:, :, 0]                        # (N, n_rx)
-    h_norm = np.linalg.norm(h_col, axis=1, keepdims=True) + 1e-10
-    w = np.conj(h_col) / h_norm               # (N, n_rx)
+    # MRC: combine across RX antennas
+    h_col  = H[:, :, 0]                        # (N, n_rx)
+    h_norm = np.linalg.norm(h_col, axis=1,
+                             keepdims=True) + 1e-10
+    w      = np.conj(h_col) / h_norm           # (N, n_rx)
 
-    # Combined output: (N, L)
-    combined = np.einsum('ni,nil->nl', w, received)
+    combined = np.einsum('ni,nil->nl', w, received)  # (N, L)
 
     return awgn_channel(combined, snr_db)
 
