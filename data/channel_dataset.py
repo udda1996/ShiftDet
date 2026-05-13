@@ -193,26 +193,25 @@ def mimo_2x2_channel(signals:  np.ndarray,
     return awgn_channel(combined, snr_db)
 
 
-def hw_impaired_channel(signals:   np.ndarray,
-                        snr_db:    np.ndarray,
-                        eps:       float = 0.1,
-                        phi_deg:   float = 5.0,
-                        pn_lw_khz: float = 10.0,
-                        fs:        float = 1e6) -> np.ndarray:
-    """
-    Hardware-impaired AWGN channel.
-
-    Models three common RF front-end impairments:
-      1. IQ Imbalance: amplitude imbalance `eps` and phase
-         imbalance `phi` distort the I and Q branches.
-         y_iq = (1 + eps/2)*cos(phi/2)*I
-              + j*(1 - eps/2)*sin(phi/2)*Q  + cross-terms
-      2. Phase Noise: Wiener-process phase noise with linewidth
-         `pn_lw_khz` kHz accumulated over the block.
-      3. AWGN as usual.
-
-    This environment is UNSEEN during training.
-    """
+def hw_impaired_channel(signals:              np.ndarray,
+                        snr_db:               np.ndarray,
+                        eps:                  float = 0.1,
+                        phi_deg:              float = 5.0,
+                        pn_lw_khz:            float = 10.0,
+                        fs:                   float = 1e6,
+                        # accept long-form config names as aliases
+                        iq_imbalance_eps:          float = None,
+                        iq_imbalance_phi_deg:      float = None,
+                        phase_noise_linewidth_khz: float = None,
+                        ) -> np.ndarray:
+    # resolve aliases — long-form names override short-form if provided
+    if iq_imbalance_eps is not None:
+        eps = iq_imbalance_eps
+    if iq_imbalance_phi_deg is not None:
+        phi_deg = iq_imbalance_phi_deg
+    if phase_noise_linewidth_khz is not None:
+        pn_lw_khz = phase_noise_linewidth_khz
+      
     N, L = signals.shape
     phi_rad = np.deg2rad(phi_deg)
 
