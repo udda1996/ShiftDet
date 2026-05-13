@@ -122,27 +122,31 @@ def rayleigh_channel(signals: np.ndarray,
     return awgn_channel(received_clean, snr_db)
 
 
-def rician_channel(signals: np.ndarray,
-                   snr_db:  np.ndarray,
-                   k_factor: float = 5.0,
+def rician_channel(signals:    np.ndarray,
+                   snr_db:     np.ndarray,
+                   k_factor:   float = 5.0,
                    doppler_hz: float = 100.0,
-                   fs: float = 1e6) -> np.ndarray:
+                   fs:         float = 1e6,
+                   # long-form config name aliases
+                   rician_k_factor:      float = None,
+                   doppler_frequency_hz: float = None,
+                   k:                    float = None,
+                   ) -> np.ndarray:
     """
     Rician fading channel.
-
-    The fading coefficient is h = sqrt(K/(K+1)) * h_LOS
-                                + sqrt(1/(K+1)) * h_scatter
-    where h_LOS = 1 (normalized LoS component)
-    and   h_scatter ~ CN(0,1).
-
-    This environment is UNSEEN during training.
-
-    Parameters
-    ----------
-    k_factor   : Rician K-factor (ratio of LOS to scatter power)
+    Accepts both short-form (k_factor, doppler_hz) and any
+    long-form config aliases to avoid TypeError mismatches.
     """
+    # resolve aliases — any alternative name overrides the default
+    if rician_k_factor is not None:
+        k_factor = rician_k_factor
+    if k is not None:
+        k_factor = k
+    if doppler_frequency_hz is not None:
+        doppler_hz = doppler_frequency_hz
+
     N, L = signals.shape
-    los_amp    = np.sqrt(k_factor / (k_factor + 1))
+    los_amp     = np.sqrt(k_factor / (k_factor + 1))
     scatter_amp = np.sqrt(1.0 / (k_factor + 1))
 
     h_scatter = (np.random.randn(N, 1) +
@@ -157,8 +161,8 @@ def rician_channel(signals: np.ndarray,
     received_clean = h * signals
     received_clean = received_clean / np.sqrt(
         np.mean(np.abs(h)**2, axis=1, keepdims=True))
-    return awgn_channel(received_clean, snr_db)
 
+    return awgn_channel(received_clean, snr_db)
 
 def mimo_2x2_channel(signals:  np.ndarray,
                      snr_db:   np.ndarray,
